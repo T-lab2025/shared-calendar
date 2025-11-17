@@ -135,7 +135,7 @@ const EventModal = ({
                 />
             </div>
 
-            {/* ★追加: 人物名入力フィールド */}
+            {/* 人物名入力フィールド */}
             <div className="input-group">
                 <label>人物名 (任意)</label>
                 <input 
@@ -184,7 +184,7 @@ const EventModal = ({
         {isDeleting && (
           <>
             <h2>予定の削除</h2>
-            {/* ★修正: 削除モーダルでもタイトルを表示 */}
+            {/* 削除モーダルでもタイトルを表示 */}
             <p>タイトル: {selectedEvent.title}</p>
             <p style={{ marginTop: '15px', color: '#dc3545' }}>この予定を削除しますか？</p>
             <div className="modal-actions">
