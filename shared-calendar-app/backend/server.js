@@ -55,15 +55,22 @@ app.get('/api/events', async (req, res) => {
  */
 
 app.post('/api/events', async (req, res) => {
-  const newEvent = req.body; // リクエストボディから新しい予定データを取得
-  if (!newEvent.title || !newEvent.date) { // titleとdateが必須
+  const { title, date, end_date, personName } = req.body; // リクエストボディから新しい予定データを取得
+  if (!title || !date) { // title と date は必須
     return res.status(400).json({ error: "title と date は必須です。" });
   }
+  // 新しい予定オブジェクトを作成
+  const newEventData = {
+    title: title, // 予定のタイトル
+    date: date, // 予定の開始日
+    end_date: end_date, // 予定の終了日（省略可能）
+    personName: personName || '' // 予定の担当者名（省略可能）
+  };
 
   // データベースが初期化されていない場合
   if (!db) {
     const newId = Date.now().toString(); // 一時的なユニークIDを生成
-    const eventWithId = { id: newId, ...newEvent }; // IDを含む予定オブジェクトを作成
+    const eventWithId = { id: newId, ...newEventData }; // IDを含む予定オブジェクトを作成
     localEvents.push(eventWithId); // ローカルデータストアに追加
     console.log(`[POST-LOCAL] 予定が追加されました。ID: ${newId}`);
     return res.status(201).json(eventWithId); // 追加したデータを返す
@@ -75,7 +82,7 @@ app.post('/api/events', async (req, res) => {
     const docRef = await db.collection(COLLECTION_PATH).add(newEvent); // 新しいドキュメントを追加
     console.log(`[POST] 予定が追加されました。ID: ${docRef.id}`);
     // 追加したデータを、新しいIDと共にクライアントに返す
-    res.status(201).json({ id: docRef.id, ...newEvent });
+    res.status(201).json({ id: docRef.id, ...newEventData });
   } catch (error) {
     console.error("予定の追加エラー:", error);
     res.status(500).json({ error: "Failed to add event" });
