@@ -38,9 +38,10 @@ const EventModal = ({
   isOpen,         // モーダルが開いているか (true/false)
   onClose,        // モーダルを閉じる関数
   onSave,         // 予定を保存する関数
+  onUpdate,       // 予定を更新する関数
   onDelete,       // 予定を削除する関数
   selectedDate,   // (新規追加用) 選択された日付
-  selectedEvent   // (削除用) 選択された予定
+  selectedEvent   // (編集/削除用) 選択された予定
 }) => {
   const [title, setTitle] = useState(''); // 予定タイトルのステート
   const [date, setDate] = useState(''); // 日付 (YYYY-MM-DD)
@@ -72,9 +73,36 @@ const EventModal = ({
       setPersonName(''); // 担当者名は空にする
 
       } else if (selectedEvent) {
-      // 編集/削除モードの場合 (今回は削除のみ)
-      setTitle(selectedEvent.title);
-      // 既存の予定から日付・時刻を読み込むロジックをここに実装する（省略）
+      // 編集/削除モードの場合
+      const event = selectedEvent; // App.jsxで渡されたEventApiオブジェクト
+
+      // extendedPropsから元のタイトルと人物名を取得
+      const props = event.extendedProps; // extendedPropsを取得
+
+      // タイトルと人物名のロード
+      setTitle(props.originalTitle || event.title.split(' (')[0]); // 元のタイトルをセット
+      setPersonName(props.personName || ''); // 担当者名をセット
+
+      // 日付と時刻のロード
+      const start = event.start;
+      const end = event.end;
+      
+      if (start) {
+        setDate(formatDate(start)); // 日付をセット
+        setStartTime(formatTime(start)); // 開始時刻をセット
+      } else {
+        setDate(formatDate(new Date())); // 日付がない場合は今日の日付をセット
+        setStartTime('09:00'); // デフォルト開始時刻をセット
+      }
+
+      if (end) {
+        setEndTime(formatTime(end)); // 終了時刻をセット
+      } else {
+        // 終了時刻がない場合は開始時刻の1時間後をセット
+        const endDefault = new Date(start);
+        endDefault.setHours(start.getHours() + 1);
+        setEndTime(formatTime(endDefault)); // デフォルト終了時刻をセット
+      }
 
     }
   }, [isOpen, selectedDate, selectedEvent]);
@@ -88,20 +116,27 @@ const EventModal = ({
     }
   };
 
-  // 保存ボタンが押されたときの処理
-  const handleSaveClick = () => {
+  // 保存/更新ボタンが押されたときの処理
+  const handleSaveOrUpdateClick = () => {
     if (!title || !title.trim() || !date || !startTime || !endTime) {
-      alert("すべてのフィールドを入力してください。");
+      alert("タイトル、日付、時刻は必須です。");
       return;
     }
-    // onSaveに、入力されたすべてのデータを渡す
-    onSave({
+    // 入力データを成形
+    const eventData = {
         title: title.trim(),
         date: date,
         startTime: startTime,
         endTime: endTime,
         personName: personName.trim()
-    });
+    };
+    
+    // IDがある場合は更新 (PUT)、ない場合は新規追加 (POST)
+    if (selectedEvent && selectedEvent.id) {
+        onUpdate(selectedEvent.id, eventData); // 更新用API呼び出し
+    } else {
+        onSave(eventData); // 新規追加用API呼び出し
+    }
   };
 
   // 削除ボタンが押されたときの処理
@@ -115,84 +150,79 @@ const EventModal = ({
     }
   };
 
-  const isAdding = !!selectedDate; // 日付が選択されていれば「追加モード」
-  const isDeleting = !!selectedEvent; // 予定が選択されていれば「削除モード」
+  const isEditing = !!selectedEvent; // 予定が選択されていれば編集モード
+
+  const modalTitle = isEditing ? '予定の編集' : '予定の追加';
+  const saveButtonText = isEditing ? '更新して保存' : '追加';
 
   return (
     <div id="modal-overlay" className="modal-overlay" onClick={handleOverlayClick}>
       <div className="modal-content">
-        {isAdding && (
-          <>
-            <h2>予定の追加</h2>
-            <div className="input-group">
-                <label>予定のタイトル</label>
+        <h2>{modalTitle}</h2>
+        
+        {/* --- 入力フォーム (追加・編集共通) --- */}
+        <div className="input-group">
+            <label>予定のタイトル</label>
+            <input 
+              type="text" 
+              value={title} 
+              onChange={(e) => setTitle(e.target.value)} 
+              placeholder="タイトルを入力" 
+              autoFocus
+            />
+        </div>
+        <div className="input-group">
+            <label>人物名 (任意)</label>
+            <input 
+              type="text" 
+              value={personName} 
+              onChange={(e) => setPersonName(e.target.value)} 
+              placeholder="名前を入力 (例: 田中)" 
+            />
+        </div>
+        <div className="input-group">
+            <label>日付</label>
+            <input 
+              type="date" 
+              value={date} 
+              onChange={(e) => setDate(e.target.value)} 
+            />
+        </div>
+        <div className="input-row">
+            <div className="input-group half">
+                <label>予定の開始時刻</label>
                 <input 
-                  type="text" 
-                  value={title} 
-                  onChange={(e) => setTitle(e.target.value)} 
-                  placeholder="タイトルを入力" 
-                  autoFocus
+                  type="time" 
+                  value={startTime} 
+                  onChange={(e) => setStartTime(e.target.value)} 
                 />
             </div>
-
-            {/* 人物名入力フィールド */}
-            <div className="input-group">
-                <label>人物名 (任意)</label>
+            <div className="input-group half">
+                <label>予定の終了時刻</label>
                 <input 
-                  type="text" 
-                  value={personName} 
-                  onChange={(e) => setPersonName(e.target.value)} 
-                  placeholder="名前を入力 (例: 田中)" 
+                  type="time" 
+                  value={endTime} 
+                  onChange={(e) => setEndTime(e.target.value)} 
                 />
             </div>
-            
-            <div className="input-group">
-                <label>日付</label>
-                <input 
-                  type="date" 
-                  value={date} 
-                  onChange={(e) => setDate(e.target.value)} 
-                />
-            </div>
+        </div>
+        
+        {/* --- アクションボタン --- */}
+        <div className="modal-actions">
+          <button onClick={handleSaveOrUpdateClick} className="modal-button primary">
+            {saveButtonText}
+          </button>
+          
+          {isEditing && (
+            // ★編集モードの時に削除ボタンを表示
+            <button onClick={handleDeleteClick} className="modal-button danger">
+              削除
+            </button>
+          )}
 
-            <div className="input-row">
-                <div className="input-group half">
-                    <label>予定の開始時刻</label>
-                    <input 
-                      type="time" 
-                      value={startTime} 
-                      onChange={(e) => setStartTime(e.target.value)} 
-                    />
-                </div>
-                <div className="input-group half">
-                    <label>予定の終了時刻</label>
-                    <input 
-                      type="time" 
-                      value={endTime} 
-                      onChange={(e) => setEndTime(e.target.value)} 
-                    />
-                </div>
-            </div>
-            
-            <div className="modal-actions">
-              <button onClick={handleSaveClick} className="modal-button primary">保存</button>
-              <button onClick={onClose} className="modal-button">キャンセル</button>
-            </div>
-          </>
-        )}
+          <button onClick={onClose} className="modal-button">キャンセル</button>
+        </div>
 
-        {isDeleting && (
-          <>
-            <h2>予定の削除</h2>
-            {/* 削除モーダルでもタイトルを表示 */}
-            <p>タイトル: {selectedEvent.title}</p>
-            <p style={{ marginTop: '15px', color: '#dc3545' }}>この予定を削除しますか？</p>
-            <div className="modal-actions">
-              <button onClick={handleDeleteClick} className="modal-button danger">削除</button>
-              <button onClick={onClose} className="modal-button">キャンセル</button>
-            </div>
-          </>
-        )}
       </div>
     </div>
   );
@@ -305,7 +335,7 @@ function App() {
   };
 
   /**
-   * 3. 予定クリック時: モーダルを開く (削除モード)
+   * 3. 予定クリック時: モーダルを開く (編集/削除モード)
    */
   const handleEventClick = (info) => {
     setModalOpen(true); // モーダルを開く
@@ -354,8 +384,38 @@ function App() {
     }
   };
 
+  // 6. 予定の編集 (PUT)
+  const handleModalUpdate = async (eventId, { title, date, startTime, endTime, personName }) => {
+    // タイムゾーンを考慮して、ISO形式の文字列を生成
+    const startDateTime = `${date}T${startTime}:00`;
+    const endDateTime = `${date}T${endTime}:00`;
+
+    const updatedEvent = {
+      title: title, // 更新されたタイトル
+      date: startDateTime, // 更新された開始日時刻
+      end_date: endDateTime, // 更新された終了日時刻
+      personName: personName // 更新された担当者名
+    };
+
+    try {
+      // PUTメソッドで更新APIを呼び出す
+      const response = await fetch(`${API_URL}/${eventId}`, {
+        method: 'PUT', // PUTメソッドで送信
+        headers: { 'Content-Type': 'application/json' }, // JSON形式で送信
+        body: JSON.stringify(updatedEvent), // 更新データをJSON文字列に変換して送信
+      });
+      if (!response.ok) throw new Error('予定の更新に失敗しました。');
+      
+      fetchEvents(); // カレンダーを再読み込み
+      closeModal(); // モーダルを閉じる
+    } catch (err) {
+      console.error("予定の更新に失敗しました:", err);
+      setError("予定の更新に失敗しました。バックエンドにPUTエンドポイントがあるか確認してください。");
+    }
+  };
+
   /**
-   * 6. モーダルで「削除」が押されたときの処理 (DELETE)
+   * 7. モーダルで「削除」が押されたときの処理 (DELETE)
    */
   const handleModalDelete = async (eventId) => { // 予定IDはselectedEventから取得
 
@@ -395,6 +455,8 @@ function App() {
     locale: 'ja', // 日本語に設定
     
     weekends: true, // 土日を有効にする
+
+    editable: true, // ドラッグアンドドロップによる移動を可能にする
 
     selectable: true, // 期間選択を有効にする
 
@@ -460,6 +522,7 @@ function App() {
         isOpen={modalOpen} // モーダルの開閉状態
         onClose={closeModal} // モーダルを閉じる関数
         onSave={handleModalSave} // 予定保存関数
+        onUpdate={handleModalUpdate} // 予定更新関数
         onDelete={handleModalDelete} // 予定削除関数
         selectedDate={selectedDate} // 選択された日付
         selectedEvent={selectedEvent} // 選択された予定

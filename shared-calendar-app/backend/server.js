@@ -90,6 +90,50 @@ app.post('/api/events', async (req, res) => {
 });
 
 /**
+ * PUT /api/events/:id
+ * 予定を編集する
+ */
+app.put('/api/events/:id', async (req, res) => { // URLパラメータから予定IDを取得
+  const eventId = req.params.id; // URLパラメータから予定IDを取得
+  const { title, date, end_date, personName } = req.body; // リクエストボディから更新データを取得
+
+  if (!eventId || !title || !date) { // ID, title, date は必須
+    return res.status(400).json({ error: "ID, title, date は必須です。" });
+  }
+
+  const updatedEventData = { // 更新する予定データを作成
+    title: title, // 予定のタイトル
+    date: date, // 予定の開始日
+    end_date: end_date, // 予定の終了日（省略可能）
+    personName: personName || '' // 予定の担当者名（省略可能）
+  };
+
+  if (!db) { // データベースが初期化されていない場合
+    const index = localEvents.findIndex(e => e.id === eventId); // ローカルデータストアで予定を検索
+    if (index !== -1) { // 予定が見つかった場合
+      localEvents[index] = { id: eventId, ...updatedEventData }; // 予定を更新
+      console.log(`[PUT-LOCAL] 予定 (ID: ${eventId}) が更新されました。`);
+      return res.status(200).json(localEvents[index]); 
+    } else {
+      return res.status(404).json({ error: "Local event not found" });
+    }
+  }
+
+  // Firestoreから予定を更新
+  try {
+    // ドキュメント参照を取得
+    const docRef = db.collection(COLLECTION_PATH).doc(eventId);
+    // updateDocではなくsetDocを使うことで、フィールドが存在しなくても上書き・作成可能
+    await docRef.set(updatedEventData, { merge: true }); 
+    console.log(`[PUT] 予定 (ID: ${eventId}) が更新されました。`);
+    res.status(200).json({ id: eventId, ...updatedEventData });
+  } catch (error) {
+    console.error("予定の更新エラー:", error);
+    res.status(500).json({ error: "Failed to update event" });
+  }
+});
+
+/**
  * DELETE /api/events/:id
  * 既存の予定を削除する
  */
