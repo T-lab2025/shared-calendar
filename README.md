@@ -7,4 +7,4 @@
 予定のクリック→削除をクリック→青いアイコンが消えれば完了
 
 ## 詳しいやり方、今後の課題(Notion)
-[https://www.notion.so/Shared-Calendar-2a97a8960adc807bac92ecaaf72f6c4c?source=copy_link](https://www.notion.so/Shared-Calendar-2a97a8960adc807bac92ecaaf72f6c4c?source=copy_link)
+
