@@ -9,7 +9,7 @@ import timeGridPlugin from '@fullcalendar/timegrid'; // 時間表示プラグイ
 // CSSファイルのインポート
 import './App.css'
 // バックエンドAPIのベースURLを設定
-const API_URL = 'http://localhost:3000/api/events';
+const API_URL = 'https://shared-calendar-1qum.onrender.com';
 
 // --- 時刻フォーマット関数 ---
 // DateオブジェクトをHH:MM形式の文字列に変換
