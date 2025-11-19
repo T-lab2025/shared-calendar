@@ -7,9 +7,9 @@
 予定のクリック→削除をクリック→青いアイコンが消えれば完了
 
 ## 実行方法
-#1. https://shared-calendar-1qum.onrender.comにアクセス
+1. https://shared-calendar-1qum.onrender.com にアクセス
 
-#2. https://t-lab2025.github.io/shared-calendar/にアクセス
+2. https://t-lab2025.github.io/shared-calendar/ にアクセス
 
 ## 作成手順などのNotion
 https://www.notion.so/Shared-Calendar-2a97a8960adc807bac92ecaaf72f6c4c
